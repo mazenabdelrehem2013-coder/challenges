@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, ErrorText, Heading, Muted, ProgressBar } from '@/components/ui';
-import type { Profile as ProfileData } from '@/lib/api';
+import { Avatar, Button, Card, ErrorText, Field, Heading, Muted, ProgressBar } from '@/components/ui';
+import { api, type Profile as ProfileData } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { useApi } from '@/lib/useApi';
 import { colors } from '@/lib/theme';
@@ -23,6 +24,50 @@ function Stat({ value, label, color = colors.ink }: { value: string; label: stri
       <Text style={{ fontSize: 20, fontWeight: '700', color }}>{value}</Text>
       <Muted>{label}</Muted>
     </View>
+  );
+}
+
+function ChangePassword() {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api('/me/password', { method: 'POST', body: { currentPassword: current, newPassword: next } });
+      setCurrent('');
+      setNext('');
+      setOpen(false);
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not change the password');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <View style={{ gap: 8 }}>
+        {done && <Muted style={{ textAlign: 'center', color: colors.good }}>Password changed.</Muted>}
+        <Button title="Change password" kind="secondary" onPress={() => { setDone(false); setOpen(true); }} />
+      </View>
+    );
+  }
+  return (
+    <Card style={{ gap: 12 }}>
+      <Heading>Change password</Heading>
+      <Field label="Current password" value={current} onChangeText={setCurrent} secureTextEntry autoComplete="password" textContentType="password" />
+      <Field label="New password (8+ characters)" value={next} onChangeText={setNext} secureTextEntry autoComplete="new-password" textContentType="newPassword" />
+      <ErrorText error={error} />
+      <Button title="Save new password" onPress={submit} busy={busy} disabled={!current || next.length < 8} />
+      <Button title="Cancel" kind="secondary" onPress={() => { setOpen(false); setError(null); }} />
+    </Card>
   );
 }
 
@@ -87,6 +132,7 @@ export default function Profile() {
               })}
             </View>
 
+            <ChangePassword />
             <Button title="Sign out" kind="secondary" onPress={signOut} />
           </>
         )}

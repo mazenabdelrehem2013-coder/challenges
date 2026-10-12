@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Challenges</title>
+<style>html,body{height:100%;margin:0}body{overflow:hidden;background:#F6F5FB}#root{display:flex;height:100%;flex:1}</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="../demo-api.js"></script>
+<script>
+  // The app's router reads the address bar, so start it at "/" and load its files from this folder.
+  window.__PHONE_BASE = new URL('./', location.href).href;
+  var appSrc = new URL('app.js', location.href).href;
+  history.replaceState(null, '', '/');
+  var s = document.createElement('script');
+  s.src = appSrc;
+  document.body.appendChild(s);
+</script>
+</body>
+</html>

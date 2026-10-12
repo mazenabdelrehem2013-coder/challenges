@@ -3,9 +3,11 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 // Where the back end lives. Set EXPO_PUBLIC_API_URL (or "extra.apiUrl" in app.json)
-// to your server's address, e.g. https://challenges.yourcompany.com
-export const API_URL: string =
+// to your server's address, e.g. https://challenges.yourcompany.com.
+// "same-origin" is for the web version served by the back end itself.
+const configuredUrl: string =
   process.env.EXPO_PUBLIC_API_URL || (Constants.expoConfig?.extra?.apiUrl as string) || 'http://localhost:4000';
+export const API_URL: string = configuredUrl === 'same-origin' ? '' : configuredUrl;
 
 const TOKEN_KEY = 'challenges-token';
 let token: string | null = null;

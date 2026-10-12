@@ -30,11 +30,19 @@ export function createApp(db) {
   app.use('/api', socialRouter(db));
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
-  // Serve the built manager/HR dashboard from the same server when it exists.
-  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../dashboard/dist');
-  if (fs.existsSync(dist)) {
-    app.use(express.static(dist));
-    app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(dist, 'index.html')));
+  // Serve the built web apps from the same server when they exist:
+  // the manager/HR dashboard at /admin and the employee app (web version) at /.
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const publicDir = process.env.PUBLIC_DIR || path.resolve(here, '../../public');
+  const dashboard = fs.existsSync(path.join(publicDir, 'admin')) ? path.join(publicDir, 'admin') : path.resolve(here, '../../dashboard/dist');
+  const phone = path.join(publicDir, 'app');
+  if (fs.existsSync(dashboard)) {
+    app.use('/admin', express.static(dashboard));
+    app.get(/^\/admin(\/.*)?$/, (req, res) => res.sendFile(path.join(dashboard, 'index.html')));
+  }
+  if (fs.existsSync(phone)) {
+    app.use(express.static(phone));
+    app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(phone, 'index.html')));
   }
 
   // eslint-disable-next-line no-unused-vars

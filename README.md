@@ -43,9 +43,20 @@ cd mobile && npx tsc --noEmit
 
 ## Going live
 
-- **Server:** build the dashboard (`cd dashboard && npm run build`), then run the back end; it serves the dashboard from the same address. Set `JWT_SECRET` to a long random value, `NODE_ENV=production`, `DB_FILE` to a path on a persistent disk, and `CORS_ORIGINS` if the dashboard is hosted elsewhere. Put it behind HTTPS.
-- **Phone app:** set `extra.apiUrl` in `mobile/app.json` (or `EXPO_PUBLIC_API_URL`) to the server's https address, run `npx eas-cli@latest init` to get a project id (needed for push notifications), then `npx eas-cli@latest build` and `submit` for Google Play and the App Store. Change `ios.bundleIdentifier` and `android.package` in `app.json` to your company's ids first.
-- **People:** HR adds people from the dashboard (People page) and shares their first password; anyone can change theirs via `POST /api/me/password`.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mazenabdelrehem2013-coder/challenges)
+
+One server runs everything. After it's deployed:
+
+- `https://<your-address>/` is the employee app (web version, works on any phone browser; "Add to Home Screen" makes it feel like an app).
+- `https://<your-address>/admin` is the manager and HR dashboard.
+
+**Render (one click):** press the button above, sign in to Render, and fill in `ADMIN_EMAIL` and `ADMIN_PASSWORD` (at least 8 characters). That account is the first admin; sign in at `/admin`, set up regions, branches, departments and teams in Org chart, then add people in People. Render generates `JWT_SECRET` for you and keeps the database on a 1 GB disk, which needs the paid Starter plan (about $7 a month plus the disk). Set `SEED_DEMO` to `true` only if you want the demo company instead of a clean start; its accounts all share the public password `demo1234`, so don't leave it running that way.
+
+**Anywhere else:** build the `Dockerfile` and run it with a persistent volume at `/data`, plus `JWT_SECRET` (a long random value), `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Put it behind HTTPS.
+
+**Android and iPhone apps:** set `extra.apiUrl` in `mobile/app.json` to your live https address, change `ios.bundleIdentifier` and `android.package` to your company's ids, then run `npx eas-cli@latest init`, `npx eas-cli@latest build` and `npx eas-cli@latest submit`. This needs a free Expo account, a Google Play developer account ($25 once) and an Apple developer account ($99 a year).
+
+**People:** HR adds people from the dashboard (People page) and shares their first password; anyone can change theirs via `POST /api/me/password`.
 
 ## API overview
 

@@ -142,3 +142,18 @@ test('notifications are private to their owner', async () => {
   await assertSucceeds(updateDoc(doc(anon('omar'), 'notifications/n1'), { read: true }));
   await assertFails(updateDoc(doc(anon('omar'), 'notifications/n1'), { text: 'changed' }));
 });
+
+test('on a fresh project the owner can set up the first team, then join as admin; nobody else can', async () => {
+  await env.clearFirestore();
+  const owner = email('boss');
+  const stranger = email('stranger');
+  await assertFails(setDoc(doc(owner, 'regions/r1'), { name: 'Main region' }));
+  await assertSucceeds(setDoc(doc(owner, 'config/setup'), { ownerUid: 'boss' }));
+  await assertSucceeds(setDoc(doc(owner, 'regions/r1'), { name: 'Main region' }));
+  await assertSucceeds(setDoc(doc(owner, 'branches/b1'), { name: 'Head office', regionId: 'r1' }));
+  await assertSucceeds(setDoc(doc(owner, 'departments/d1'), { name: 'Management' }));
+  await assertSucceeds(setDoc(doc(owner, 'teams/t1'), { name: 'Management', departmentId: 'd1', branchId: 'b1' }));
+  await assertFails(setDoc(doc(stranger, 'teams/t9'), { name: 'Mine', departmentId: 'd1', branchId: 'b1' }));
+  await assertFails(setDoc(doc(stranger, 'players/stranger'), { name: 'X', role: 'admin', active: true, points: 0, teamId: 't1', departmentId: 'd1', branchId: 'b1', regionId: 'r1' }));
+  await assertSucceeds(setDoc(doc(owner, 'players/boss'), { name: 'Boss', role: 'admin', active: true, points: 0, teamId: 't1', departmentId: 'd1', branchId: 'b1', regionId: 'r1' }));
+});

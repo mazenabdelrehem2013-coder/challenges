@@ -13,6 +13,10 @@ service cloud.firestore {
     function isStaff() { return active() && me().role in ['manager', 'hr', 'admin']; }
     function isHR() { return active() && me().role in ['hr', 'admin']; }
     function isAdmin() { return active() && me().role == 'admin'; }
+    function isOwner() {
+      return signedIn() && exists(/databases/$(database)/documents/config/setup)
+        && doc(/config/setup).data.ownerUid == uid();
+    }
     function emailUser() { return signedIn() && request.auth.token.firebase.sign_in_provider == 'password'; }
     function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
     function setting(name, fallback) {
@@ -52,7 +56,8 @@ service cloud.firestore {
 
     match /{kind}/{id} {
       allow read: if signedIn() && kind in ['regions', 'branches', 'departments', 'teams'];
-      allow write: if isHR() && kind in ['regions', 'branches', 'departments', 'teams'];
+      // HR keeps the org chart; the owner can also set up the first branch and team before joining.
+      allow write: if (isHR() || isOwner()) && kind in ['regions', 'branches', 'departments', 'teams'];
     }
 
     match /players/{playerId} {

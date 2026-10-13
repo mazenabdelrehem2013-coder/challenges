@@ -1,0 +1,164 @@
+rules_version = '2';
+
+// Who can read and change what. The apps follow the same rules (see shared/game.js);
+// these make sure nobody can skip them by talking to the database directly.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function doc(path) { return get(/databases/$(database)/documents/$(path)); }
+    function isPlayer() { return signedIn() && exists(/databases/$(database)/documents/players/$(uid())); }
+    function me() { return get(/databases/$(database)/documents/players/$(uid())).data; }
+    function active() { return isPlayer() && me().active == true; }
+    function isStaff() { return active() && me().role in ['manager', 'hr', 'admin']; }
+    function isHR() { return active() && me().role in ['hr', 'admin']; }
+    function isAdmin() { return active() && me().role == 'admin'; }
+    function emailUser() { return signedIn() && request.auth.token.firebase.sign_in_provider == 'password'; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function setting(name, fallback) {
+      return exists(/databases/$(database)/documents/settings/game)
+        ? doc(/settings/game).data.get(name, fallback)
+        : fallback;
+    }
+    function myKey(scope) { return scope == 'person' ? 'person:' + uid() : scope + ':' + me()[scope + 'Id']; }
+    function myKeys() {
+      return [myKey('person'), myKey('team'), myKey('department'), myKey('branch'), myKey('region')];
+    }
+    function isGroup(scope) { return scope in ['department', 'branch', 'region']; }
+    function canModerate(c) {
+      return isHR() || (isStaff() && me().role == 'manager'
+        && !(c.scope in ['branch', 'region'])
+        && c.creatorDepartmentId == me().departmentId);
+    }
+    function validName(n) { return n is string && n.size() >= 1 && n.size() <= 60; }
+    // A player's org ids must match their team.
+    function orgMatchesTeam(d) {
+      let team = doc(/teams/$(d.teamId)).data;
+      return team.departmentId == d.departmentId
+        && team.branchId == d.branchId
+        && doc(/branches/$(team.branchId)).data.regionId == d.regionId;
+    }
+
+    // One-time setup: the first email account to claim the app becomes its owner (admin).
+    match /config/setup {
+      allow read: if true;
+      allow create: if emailUser() && request.resource.data.ownerUid == uid();
+    }
+
+    match /settings/game {
+      allow read: if signedIn();
+      allow write: if isHR();
+    }
+
+    match /{kind}/{id} {
+      allow read: if signedIn() && kind in ['regions', 'branches', 'departments', 'teams'];
+      allow write: if isHR() && kind in ['regions', 'branches', 'departments', 'teams'];
+    }
+
+    match /players/{playerId} {
+      allow read: if signedIn();
+      allow create: if validName(request.resource.data.name)
+        && request.resource.data.active == true
+        && request.resource.data.points == 0
+        && orgMatchesTeam(request.resource.data)
+        && (
+          // Employees join themselves, usually with just a name (anonymous sign-in).
+          (playerId == uid() && request.resource.data.role == 'employee')
+          // The owner's own admin account.
+          || (playerId == uid() && request.resource.data.role == 'admin'
+              && doc(/config/setup).data.ownerUid == uid())
+          // HR adds staff accounts; only admins can add admins.
+          || (isHR() && request.resource.data.role in ['employee', 'manager', 'hr']) || isAdmin()
+        );
+      allow update: if
+        // Players can rename themselves, and count challenges they start.
+        (playerId == uid() && changed().hasOnly(['name', 'title']) && validName(request.resource.data.name))
+        || (playerId == uid() && changed().hasOnly(['started'])
+            && request.resource.data.started == resource.data.get('started', 0) + 1)
+        // Finishing a challenge (done by staff from the dashboard) updates scores and badges.
+        || (isStaff() && changed().hasOnly(['points', 'record', 'streak', 'finished', 'badges']))
+        // HR manages people; only admins touch admin accounts.
+        || (isHR() && orgMatchesTeam(request.resource.data)
+            && ((request.resource.data.role != 'admin' && resource.data.role != 'admin') || isAdmin())
+            && playerId != uid());
+      allow delete: if false;
+    }
+
+    match /challenges/{challengeId} {
+      allow read: if signedIn();
+      allow create: if active() && request.resource.data.createdBy == uid()
+        && request.resource.data.creatorDepartmentId == me().departmentId
+        && request.resource.data.points is int && request.resource.data.points >= 0
+        && request.resource.data.keys is list && request.resource.data.endsAt is timestamp
+        && (
+          // A peer challenge: the creator's own side comes first and the right approval step applies.
+          (request.resource.data.official == false
+            && request.resource.data.points <= setting('maxPeerPoints', 500)
+            && request.resource.data.keys.size() >= 2
+            && request.resource.data.keys[0] == myKey(request.resource.data.scope)
+            && request.resource.data.status == (
+              (setting('approvalMode', 'groups') == 'all'
+                || (setting('approvalMode', 'groups') == 'groups' && isGroup(request.resource.data.scope)))
+                ? 'pending_approval'
+                : (isGroup(request.resource.data.scope) ? 'active' : 'invited')))
+          // An official challenge from a manager (up to department level) or HR.
+          || (request.resource.data.official == true && request.resource.data.status == 'active'
+            && (isHR() || (isStaff() && !(request.resource.data.scope in ['branch', 'region']))))
+        );
+      allow update: if
+        // People on an invited side accept or decline for their side.
+        (resource.data.status == 'invited' && active()
+          && changed().hasOnly(['responses', 'status'])
+          && request.resource.data.responses.diff(resource.data.responses).affectedKeys().hasOnly(myKeys())
+          && request.resource.data.status in ['invited', 'active', 'declined'])
+        // The creator can call off a challenge that hasn't started.
+        || (resource.data.createdBy == uid() && resource.data.status in ['pending_approval', 'invited']
+          && changed().hasOnly(['status']) && request.resource.data.status == 'cancelled')
+        // Managers and HR approve, reject, cancel and finish.
+        || canModerate(resource.data);
+      allow delete: if false;
+
+      match /entries/{entryId} {
+        allow read: if signedIn();
+        allow create: if active() && request.resource.data.userId == uid()
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.value is number
+          && request.resource.data.value > 0 && request.resource.data.value < 1000000000
+          && isRunning(doc(/challenges/$(challengeId)).data)
+          && request.resource.data.sideKey == myKey(doc(/challenges/$(challengeId)).data.scope)
+          && request.resource.data.sideKey in doc(/challenges/$(challengeId)).data.keys
+          && entryStatusOk(doc(/challenges/$(challengeId)).data, request.resource.data);
+        allow update: if canModerate(doc(/challenges/$(challengeId)).data)
+          && changed().hasOnly(['status']);
+        allow delete: if false;
+      }
+    }
+    function isRunning(c) {
+      return c.status == 'active' && request.time >= c.startsAt && request.time <= c.endsAt;
+    }
+    function entryStatusOk(c, e) {
+      return c.judging == 'proof'
+        ? (e.status == 'pending' && e.proofUrl is string && e.proofUrl.matches('https://.+'))
+        : e.status == 'approved';
+    }
+
+    // Points history (for daily, weekly and monthly leaderboards). Written when a challenge finishes.
+    match /points/{id} {
+      allow read: if signedIn();
+      allow create: if isStaff();
+      allow update, delete: if false;
+    }
+
+    match /activity/{id} {
+      allow read: if signedIn();
+      allow create: if active() && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /notifications/{id} {
+      allow read, delete: if signedIn() && resource.data.userId == uid();
+      allow create: if active();
+      allow update: if signedIn() && resource.data.userId == uid() && changed().hasOnly(['read']);
+    }
+  }
+}

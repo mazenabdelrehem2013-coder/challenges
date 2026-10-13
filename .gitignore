@@ -5,3 +5,4 @@ dist/
 .expo/
 web-build/
 .env
+*-debug.log

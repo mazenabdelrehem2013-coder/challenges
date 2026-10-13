@@ -80,6 +80,11 @@ service cloud.firestore {
         (playerId == uid() && changed().hasOnly(['name', 'title']) && validName(request.resource.data.name))
         || (playerId == uid() && changed().hasOnly(['started'])
             && request.resource.data.started == resource.data.get('started', 0) + 1)
+        // Players can delete their own account: the profile is wiped and switched off for good.
+        || (playerId == uid() && changed().hasOnly(['name', 'title', 'email', 'active', 'deleted'])
+            && request.resource.data.name == 'Deleted user' && request.resource.data.title == null
+            && request.resource.data.email == null && request.resource.data.active == false
+            && request.resource.data.deleted == true)
         // Finishing a challenge (done by staff from the dashboard) updates scores and badges.
         || (isStaff() && changed().hasOnly(['points', 'record', 'streak', 'finished', 'badges']))
         // HR manages people; only admins touch admin accounts.

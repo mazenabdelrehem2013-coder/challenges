@@ -991,5 +991,17 @@ export function createBackend({ fs, db, auth }) {
     return publicUser({ id: newUid, ...data });
   }
 
-  return { api, me, join, joinOptions, hasPlayer, setupState, claimOwner, addPlayer, settleDue, forget };
+  // A player deletes their own account: the profile is wiped (past results show "Deleted user")
+  // and their notifications are removed. The caller then deletes the Firebase sign-in itself.
+  async function deleteAccount() {
+    const id = uid();
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'players', id), { name: 'Deleted user', title: null, email: null, active: false, deleted: true });
+    const mine = await getDocs(query(collection(db, 'notifications'), where('userId', '==', id)));
+    mine.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    forget();
+  }
+
+  return { api, me, join, joinOptions, hasPlayer, setupState, claimOwner, addPlayer, settleDue, deleteAccount, forget };
 }

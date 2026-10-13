@@ -185,3 +185,27 @@ test('HR manages people and settings; employees cannot', async () => {
   const csv = await hr.backend.api('/admin/export.csv?period=all');
   assert.match(csv.split('\n')[0], /^Name,Email,Team/);
 });
+
+test('players can delete their own account; the profile is wiped and switched off', async () => {
+  const gone = device();
+  await signInAnonymously(gone.auth);
+  await gone.backend.join({ name: 'Temp', teamId: org.t1.id });
+  const id = gone.auth.currentUser.uid;
+  sara.backend.forget();
+  await sara.backend.api('/challenges', {
+    method: 'POST',
+    body: { title: 'Bye', scope: 'person', points: 10, opponents: [id], endsAt: new Date(Date.now() + hour).toISOString() },
+  });
+  assert.equal((await gone.backend.api('/notifications')).length, 1);
+
+  // Nobody else can wipe someone's profile.
+  await assert.rejects(fs.updateDoc(fs.doc(sara.db, 'players', id), { name: 'Deleted user', title: null, email: null, active: false, deleted: true }));
+
+  await gone.backend.deleteAccount();
+  const snap = await fs.getDoc(fs.doc(hr.db, 'players', id));
+  assert.equal(snap.data().name, 'Deleted user');
+  assert.equal(snap.data().active, false);
+  const left = await fs.getDocs(fs.query(fs.collection(gone.db, 'notifications'), fs.where('userId', '==', id)));
+  assert.equal(left.size, 0);
+  await assert.rejects(gone.backend.api('/me'), /switched off/);
+});

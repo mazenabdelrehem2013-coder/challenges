@@ -50,9 +50,17 @@ One server runs everything. After it's deployed:
 - `https://<your-address>/` is the employee app (web version, works on any phone browser; "Add to Home Screen" makes it feel like an app).
 - `https://<your-address>/admin` is the manager and HR dashboard.
 
-**Render (one click):** press the button above, sign in to Render, and fill in `ADMIN_EMAIL` and `ADMIN_PASSWORD` (at least 8 characters). That account is the first admin; sign in at `/admin`, set up regions, branches, departments and teams in Org chart, then add people in People. Render generates `JWT_SECRET` for you and keeps the database on a 1 GB disk, which needs the paid Starter plan (about $7 a month plus the disk). Set `SEED_DEMO` to `true` only if you want the demo company instead of a clean start; its accounts all share the public password `demo1234`, so don't leave it running that way.
+**Free setup (Render + Supabase):**
 
-**Anywhere else:** build the `Dockerfile` and run it with a persistent volume at `/data`, plus `JWT_SECRET` (a long random value), `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Put it behind HTTPS.
+1. Create a free project at [supabase.com](https://supabase.com). In Project Settings → API, copy the **Project URL** and the **service_role** (secret) key. The app keeps its database there, in a private storage bucket it creates by itself.
+2. Press the Deploy to Render button above and sign in to Render (free, no card). Fill in `ADMIN_EMAIL`, `ADMIN_PASSWORD` (at least 8 characters), `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`, then deploy.
+3. Sign in at `/admin` with that admin account, set up regions, branches, departments and teams in Org chart, then add people in People.
+
+Free plan limits: the server sleeps after 15 minutes without visitors, so the first visit after that takes about a minute; Supabase pauses a free project after a week with no activity (one click wakes it). Changes are copied to Supabase within a few seconds, so a crash can lose only the last few seconds. For no sleeping, switch the Render service to a paid plan; nothing else changes.
+
+Set `SEED_DEMO` to `true` only if you want the demo company instead of a clean start; its accounts all share the public password `demo1234`, so don't leave it running that way.
+
+**Anywhere else:** build the `Dockerfile` and run it with a persistent volume at `/data` (or the two `SUPABASE_` settings instead), plus `JWT_SECRET` (a long random value), `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Put it behind HTTPS.
 
 **Android and iPhone apps:** set `extra.apiUrl` in `mobile/app.json` to your live https address, change `ios.bundleIdentifier` and `android.package` to your company's ids, then run `npx eas-cli@latest init`, `npx eas-cli@latest build` and `npx eas-cli@latest submit`. This needs a free Expo account, a Google Play developer account ($25 once) and an Apple developer account ($99 a year).
 

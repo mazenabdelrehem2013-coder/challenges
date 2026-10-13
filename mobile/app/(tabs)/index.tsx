@@ -12,7 +12,7 @@ import { ago, colors, STATUS_LABEL } from '@/lib/theme';
 interface Feed {
   me: Me;
   invites: Challenge[];
-  activity: { id: number; kind: string; text: string; challengeId: number | null; createdAt: string }[];
+  activity: { id: string; kind: string; text: string; challengeId: string | null; createdAt: string }[];
 }
 
 function greeting() {
@@ -24,7 +24,7 @@ export default function Home() {
   const feed = useApi<Feed>('/feed');
   const mine = useApi<Challenge[]>('/challenges');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState<number | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function answer(c: Challenge, accept: boolean) {
     setBusy(c.id);

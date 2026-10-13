@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import { ago, colors } from '@/lib/theme';
 
-interface Note { id: number; text: string; challengeId: number | null; read: boolean; createdAt: string }
+interface Note { id: string; text: string; challengeId: string | null; read: boolean; createdAt: string }
 
 export default function Alerts() {
   const { data, error, refresh, refreshing } = useApi<Note[]>('/notifications');

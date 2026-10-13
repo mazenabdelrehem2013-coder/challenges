@@ -1,18 +1,37 @@
 import { Redirect } from 'expo-router';
-import { useState } from 'react';
+import { signInAnonymously } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, ErrorText, Field, Muted } from '@/components/ui';
+import { Button, Chip, ErrorText, Field, Label, Muted } from '@/components/ui';
+import { auth, backend } from '@/lib/firebase';
 import { useSession } from '@/lib/session';
 import { colors } from '@/lib/theme';
 
-export default function Login() {
-  const { me, signIn } = useSession();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+type Team = { id: string; name: string; department: string; branch: string };
+
+// Joining takes a name and a team. No email or password: Firebase gives this phone
+// an anonymous account and remembers it.
+export default function Join() {
+  const { me, join } = useSession();
+  const [name, setName] = useState('');
+  const [teams, setTeams] = useState<Team[] | null>(null);
+  const [teamId, setTeamId] = useState('');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!auth.currentUser) await signInAnonymously(auth);
+        setTeams(await backend.joinOptions());
+      } catch (err) {
+        setError((err as Error).message);
+      }
+    })();
+  }, []);
 
   if (me) return <Redirect href="/" />;
 
@@ -20,13 +39,16 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      await signIn(email.trim(), password);
+      await join(name.trim(), teamId);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
+
+  const needle = search.trim().toLowerCase();
+  const shown = (teams || []).filter((t) => !needle || `${t.name} ${t.department} ${t.branch}`.toLowerCase().includes(needle));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.night }}>
@@ -39,10 +61,20 @@ export default function Login() {
           </View>
           <View style={{ backgroundColor: colors.card, borderRadius: 20, padding: 20, gap: 16 }}>
             <ErrorText error={error} />
-            <Field label="Work email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="username" />
-            <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={submit} />
-            <Button title="Sign in" onPress={submit} busy={busy} disabled={!email || !password} />
-            <Muted>Your HR team gives you your account.</Muted>
+            <Field label="Your name" value={name} onChangeText={setName} autoComplete="name" textContentType="name" maxLength={60} />
+            <View style={{ gap: 8 }}>
+              <Label>Your team</Label>
+              {teams && teams.length > 8 ? <Field label="Find your team" value={search} onChangeText={setSearch} /> : null}
+              {teams === null && !error ? <Muted>Loading teams…</Muted> : null}
+              {teams && !teams.length ? <Muted>No teams yet. Ask HR to add your team in the dashboard.</Muted> : null}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {shown.slice(0, 40).map((t) => (
+                  <Chip key={t.id} label={`${t.name} · ${t.branch}`} selected={teamId === t.id} onPress={() => setTeamId(t.id)} />
+                ))}
+              </View>
+            </View>
+            <Button title="Join" onPress={submit} busy={busy} disabled={!name.trim() || !teamId} />
+            <Muted>No password needed. This phone remembers you.</Muted>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

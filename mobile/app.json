@@ -35,15 +35,10 @@
           "resizeMode": "contain",
           "backgroundColor": "#3530C9"
         }
-      ],
-      "expo-notifications",
-      "expo-secure-store"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "apiUrl": "http://localhost:4000"
     }
   }
 }

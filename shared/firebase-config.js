@@ -2,12 +2,12 @@
 // Project settings > General > Your apps > Web app > "firebaseConfig".
 // These values are not secret (every web app ships them); firestore.rules protects the data.
 export const firebaseConfig = {
-  apiKey: 'AIzaSyAc0ggZ4LSM5PY4fW56WFadLU0Gth2_qoY',
-  authDomain: 'sunna-muslim.firebaseapp.com',
-  projectId: 'sunna-muslim',
-  storageBucket: 'sunna-muslim.firebasestorage.app',
-  messagingSenderId: '288970394324',
-  appId: '1:288970394324:web:b6e4d7933baedd1c898941',
+  apiKey: 'AIzaSyBLMEavYIf7BvC3Gag18Lc1ONuzs6Qs1rU',
+  authDomain: 'employee-challenges.firebaseapp.com',
+  projectId: 'employee-challenges',
+  storageBucket: 'employee-challenges.firebasestorage.app',
+  messagingSenderId: '217775328448',
+  appId: '1:217775328448:web:fa165a7bd14523a0933125',
 };
 
 // To try things on the local emulators instead (`npm run emulators`, then `npm run seed`), start the

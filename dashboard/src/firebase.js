@@ -4,9 +4,10 @@ import {
   getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail,
 } from 'firebase/auth';
 import { createBackend } from '../../shared/client.js';
-import { firebaseConfig, usingEmulators, emulatorProject } from '../../shared/firebase-config.js';
+import { firebaseConfig, usingEmulators as noProject, emulatorProject } from '../../shared/firebase-config.js';
 
-// Your Firebase project (shared/firebase-config.js), or the local emulators while it is empty.
+// Your Firebase project (shared/firebase-config.js), or the local emulators with VITE_USE_EMULATORS=1.
+const usingEmulators = noProject || import.meta.env.VITE_USE_EMULATORS === '1';
 const config = usingEmulators ? { apiKey: 'demo-key', projectId: emulatorProject, authDomain: 'localhost' } : firebaseConfig;
 const host = import.meta.env.VITE_EMULATOR_HOST || '127.0.0.1';
 

@@ -45,24 +45,23 @@ Because the free plan has no server code, a finished challenge is scored when a 
 ```bash
 npm install && (cd mobile && npm install) && (cd dashboard && npm install)
 npx firebase login
-npx firebase use --add          # pick your project
 npm run deploy                  # builds and publishes the website and the database rules
 ```
 
-Or let GitHub do it: in the repo's **Settings > Secrets and variables > Actions**, add the variable `FIREBASE_PROJECT_ID` and the secret `FIREBASE_SERVICE_ACCOUNT` (a service account JSON key with the Firebase Admin role, from Google Cloud console > IAM > Service accounts). Every push to `main` then runs the tests and publishes.
+Or let GitHub do it: in Firebase console > Project settings > Service accounts, click **Generate new private key**, then in the repo's **Settings > Secrets and variables > Actions** add a secret named `FIREBASE_SERVICE_ACCOUNT` with the whole file's contents. Every push to `main` then runs the tests and publishes to the project in `.firebaserc`.
 
 **Android and iPhone apps:** change `ios.bundleIdentifier` and `android.package` in `mobile/app.json` to your company's ids, then run `npx eas-cli@latest init`, `npx eas-cli@latest build` and `npx eas-cli@latest submit`. This needs a free Expo account, a Google Play developer account ($25 once) and an Apple developer account ($99 a year).
 
 ## Run it locally
 
-You need Node.js 20+ and Java 21 (for the Firebase emulators). While `shared/firebase-config.js` is empty, both apps use the local emulators.
+You need Node.js 20+ and Java 21 (for the Firebase emulators).
 
 ```bash
 npm install && (cd mobile && npm install) && (cd dashboard && npm install)
 npm run emulators               # terminal 1
 npm run seed                    # terminal 2: demo company
-(cd dashboard && npm run dev)   # http://localhost:5173, sign in as hr@example.com / demo1234
-(cd mobile && npx expo start)   # press w for the web version, or scan the QR code with Expo Go
+(cd dashboard && VITE_USE_EMULATORS=1 npm run dev)   # http://localhost:5173, sign in as hr@example.com / demo1234
+(cd mobile && EXPO_PUBLIC_USE_EMULATORS=1 npx expo start)   # press w for the web version, or scan the QR code with Expo Go
 ```
 
 On a phone, set `EXPO_PUBLIC_EMULATOR_HOST` to your computer's IP address so the app can reach the emulators.

@@ -5,12 +5,13 @@ import * as fs from 'firebase/firestore';
 import { Platform } from 'react-native';
 
 import { createBackend } from '../../shared/client.js';
-import { emulatorProject, firebaseConfig, usingEmulators } from '../../shared/firebase-config.js';
+import { emulatorProject, firebaseConfig, usingEmulators as noProject } from '../../shared/firebase-config.js';
 
 // Connects to your Firebase project (shared/firebase-config.js), or to the local
-// emulators while no project is filled in. EXPO_PUBLIC_EMULATOR_HOST picks the
+// emulators with EXPO_PUBLIC_USE_EMULATORS=1. EXPO_PUBLIC_EMULATOR_HOST picks the
 // emulator machine when testing on a phone (defaults to localhost).
 const host = process.env.EXPO_PUBLIC_EMULATOR_HOST || '127.0.0.1';
+const usingEmulators = noProject || process.env.EXPO_PUBLIC_USE_EMULATORS === '1';
 
 export const app = initializeApp(
   usingEmulators ? { apiKey: 'demo-key', projectId: emulatorProject, authDomain: 'localhost' } : firebaseConfig

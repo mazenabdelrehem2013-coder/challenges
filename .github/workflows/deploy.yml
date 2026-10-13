@@ -1,7 +1,7 @@
 # Tests every push. On main it also publishes the app, the dashboard and the database
-# rules to Firebase, once these are set in GitHub (Settings > Secrets and variables > Actions):
-#   variable FIREBASE_PROJECT_ID     your Firebase project id
-#   secret   FIREBASE_SERVICE_ACCOUNT the JSON key of a service account that can deploy
+# rules to the Firebase project in .firebaserc, once the repo has the secret
+# FIREBASE_SERVICE_ACCOUNT (Settings > Secrets and variables > Actions): the JSON key from
+# Firebase console > Project settings > Service accounts > Generate new private key.
 name: Test and deploy
 
 on:
@@ -30,11 +30,11 @@ jobs:
         working-directory: mobile
       - run: npm run build
       - name: Deploy to Firebase
-        if: github.ref == 'refs/heads/main' && vars.FIREBASE_PROJECT_ID != ''
+        if: github.ref == 'refs/heads/main'
         env:
           SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
         run: |
+          if [ -z "$SERVICE_ACCOUNT" ]; then echo "No FIREBASE_SERVICE_ACCOUNT secret yet, skipping deploy"; exit 0; fi
           echo "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx firebase deploy --only hosting,firestore --project "$PROJECT" --non-interactive
+          npx firebase deploy --only hosting,firestore --non-interactive

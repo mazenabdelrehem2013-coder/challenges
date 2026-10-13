@@ -22,7 +22,7 @@ A challenge is between two or more sides of the same level:
 2. **Approval.** By default, department, branch and region challenges created by employees need approval (HR can change this to "all" or "none"). Managers approve up to department level; branch and region go to HR.
 3. **Accepting.** Person and team challenges wait until every opponent accepts; anyone in an invited team can accept for it. Group challenges start as soon as they are approved. Official challenges from managers or HR start immediately.
 4. **Progress.** Participants log numbers (steps, tickets, books...). With *photo proof* judging each entry needs an https link and a manager's OK before it counts.
-5. **Finish.** When the end date passes the challenge closes automatically. *Manager*-judged challenges are closed by a manager who picks the winner.
+5. **Finish.** After the end date the challenge is scored the next time a manager or HR has the dashboard open (it checks every minute). *Manager*-judged challenges are closed by a manager who picks the winner.
 
 ## Scoring
 - A person's score is their total.
@@ -49,4 +49,4 @@ Every 200 points is a level: Rookie (1), Contender (3), Competitor (5), Challeng
 | Marathoner | Finish 25 challenges |
 
 ## Leaderboards
-Rank people by points earned this week, this month or all time. Teams, departments, branches and regions rank by the total points of their members.
+Rank people by points earned today, this week, this month or all time. Teams, departments, branches and regions rank by the total points of their members.

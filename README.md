@@ -2,77 +2,74 @@
 
 An app where employees challenge each other (person, team, department, branch or region) to earn points, badges and leaderboard spots, with a web dashboard for managers and HR. The game rules are in [RULES.md](RULES.md).
 
+It runs on Firebase's free Spark plan: there is no server to look after.
+
 | Folder | What it is |
 |---|---|
-| `backend/` | Node.js API with a SQLite database. Handles sign-in, the org chart, challenges, scoring, points, badges, push notifications and reports. |
-| `dashboard/` | React web dashboard for managers and HR. |
-| `mobile/` | Android and iOS app (Expo / React Native). |
+| `mobile/` | Android and iOS app (Expo / React Native). Its web version is the employee website. |
+| `dashboard/` | React web dashboard for managers and HR, at `/admin`. |
+| `shared/` | The game rules (`game.js`) and the data layer both apps use (`client.js`), plus your Firebase settings (`firebase-config.js`). |
+| `firestore.rules` | Who can read and change what in the database. This is what stops cheating. |
+| `tests/` | Game rules, database rules, and full games played against the Firebase emulators. |
+
+## How sign-in works
+
+- **Employees** open the app, type their name and pick their team. No email or password: Firebase gives the phone an anonymous account and remembers it. (Signing out, or deleting the app, loses that account and its points, and the app warns about this.)
+- **Managers and HR** sign in to the dashboard with an email and password. HR creates these sign-ins on the People page.
+- **The first person** to open the dashboard on a new Firebase project creates the admin account.
+
+## Data in Firestore
+
+| Collection | Holds |
+|---|---|
+| `players/{uid}` | Name, role, team (with its department, branch and region), total points, won/lost/draw record, win streak, badges |
+| `challenges/{id}` | The challenge, its sides, who accepted, status and result |
+| `challenges/{id}/entries` | Progress each person logged (value, note, proof link) |
+| `points` | Every point awarded, with the date: daily, weekly and monthly leaderboards are built from this |
+| `regions`, `branches`, `departments`, `teams` | The org chart |
+| `notifications`, `activity`, `settings/game`, `config/setup` | Alerts, the feed, game settings, and who owns the app |
+
+Because the free plan has no server code, a finished challenge is scored when a manager or HR has the dashboard open (it checks when it opens and every minute after). "Finish now" on the Challenges page scores one straight away. Moving to the paid Blaze plan later would let a scheduled function do this instead.
+
+## Set up your Firebase project (once)
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com), **Add project**, and keep the free Spark plan.
+2. **Build > Authentication > Get started**, then turn on **Anonymous** and **Email/Password**.
+3. **Build > Firestore Database > Create database**, in **production mode**.
+4. **Project settings > General > Your apps > Web (`</>`)**: register an app and copy the `firebaseConfig` values into `shared/firebase-config.js`.
+5. Publish (below), open `https://<your-project>.web.app/admin` and create your admin account.
+6. In the dashboard: Org chart (regions, branches, departments, teams), then People to add managers and HR. Share `https://<your-project>.web.app` with employees.
+
+## Publish
+
+```bash
+npm install && (cd mobile && npm install) && (cd dashboard && npm install)
+npx firebase login
+npx firebase use --add          # pick your project
+npm run deploy                  # builds and publishes the website and the database rules
+```
+
+Or let GitHub do it: in the repo's **Settings > Secrets and variables > Actions**, add the variable `FIREBASE_PROJECT_ID` and the secret `FIREBASE_SERVICE_ACCOUNT` (a service account JSON key with the Firebase Admin role, from Google Cloud console > IAM > Service accounts). Every push to `main` then runs the tests and publishes.
+
+**Android and iPhone apps:** change `ios.bundleIdentifier` and `android.package` in `mobile/app.json` to your company's ids, then run `npx eas-cli@latest init`, `npx eas-cli@latest build` and `npx eas-cli@latest submit`. This needs a free Expo account, a Google Play developer account ($25 once) and an Apple developer account ($99 a year).
 
 ## Run it locally
 
-You need Node.js 20 or newer.
+You need Node.js 20+ and Java 21 (for the Firebase emulators). While `shared/firebase-config.js` is empty, both apps use the local emulators.
 
 ```bash
-# 1. Back end (http://localhost:4000)
-cd backend
-npm install
-npm run seed      # demo company; password for every demo account is demo1234
-npm start
-
-# 2. Dashboard (http://localhost:5173)
-cd ../dashboard
-npm install
-npm run dev       # sign in as hr@example.com or manager@example.com
-
-# 3. Phone app
-cd ../mobile
-npm install
-EXPO_PUBLIC_API_URL=http://<your-computer-ip>:4000 npx expo start
+npm install && (cd mobile && npm install) && (cd dashboard && npm install)
+npm run emulators               # terminal 1
+npm run seed                    # terminal 2: demo company
+(cd dashboard && npm run dev)   # http://localhost:5173, sign in as hr@example.com / demo1234
+(cd mobile && npx expo start)   # press w for the web version, or scan the QR code with Expo Go
 ```
 
-Scan the QR code with the Expo Go app on your phone (same Wi-Fi as your computer). Sign in as `sara@example.com`.
-
-Demo accounts: `admin@example.com`, `hr@example.com`, `manager@example.com` (Design department), and employees such as `sara@`, `omar@`, `lina@`, `karim@`, `nour@example.com`.
+On a phone, set `EXPO_PUBLIC_EMULATOR_HOST` to your computer's IP address so the app can reach the emulators.
 
 ## Tests
 
 ```bash
-cd backend && npm test
-cd mobile && npx tsc --noEmit
+npm test                        # game rules, database rules, and full games against the emulators
+(cd mobile && npx tsc --noEmit)
 ```
-
-## Going live
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/mazenabdelrehem2013-coder/challenges)
-
-One server runs everything. After it's deployed:
-
-- `https://<your-address>/` is the employee app (web version, works on any phone browser; "Add to Home Screen" makes it feel like an app).
-- `https://<your-address>/admin` is the manager and HR dashboard.
-
-**Free setup (Render + Supabase):**
-
-1. Create a free project at [supabase.com](https://supabase.com). In Project Settings → API, copy the **Project URL** and the **service_role** (secret) key. The app keeps its database there, in a private storage bucket it creates by itself.
-2. Press the Deploy to Render button above and sign in to Render (free, no card). Fill in `ADMIN_EMAIL`, `ADMIN_PASSWORD` (at least 8 characters), `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`, then deploy.
-3. Sign in at `/admin` with that admin account, set up regions, branches, departments and teams in Org chart, then add people in People.
-
-Free plan limits: the server sleeps after 15 minutes without visitors, so the first visit after that takes about a minute; Supabase pauses a free project after a week with no activity (one click wakes it). Changes are copied to Supabase within a few seconds, so a crash can lose only the last few seconds. For no sleeping, switch the Render service to a paid plan; nothing else changes.
-
-Set `SEED_DEMO` to `true` only if you want the demo company instead of a clean start; its accounts all share the public password `demo1234`, so don't leave it running that way.
-
-**Anywhere else:** build the `Dockerfile` and run it with a persistent volume at `/data` (or the two `SUPABASE_` settings instead), plus `JWT_SECRET` (a long random value), `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Put it behind HTTPS.
-
-**Android and iPhone apps:** set `extra.apiUrl` in `mobile/app.json` to your live https address, change `ios.bundleIdentifier` and `android.package` to your company's ids, then run `npx eas-cli@latest init`, `npx eas-cli@latest build` and `npx eas-cli@latest submit`. This needs a free Expo account, a Google Play developer account ($25 once) and an Apple developer account ($99 a year).
-
-**People:** HR adds people from the dashboard (People page) and shares their first password; anyone can change theirs via `POST /api/me/password`.
-
-## API overview
-
-All routes are under `/api` and need `Authorization: Bearer <token>` except login.
-
-- `POST /auth/login`
-- `GET /me`, `GET /profiles/:id`, `GET /feed`, `GET /leaderboard?scope=&period=`, `GET /notifications`, `GET /people?q=`
-- `GET /challenges`, `GET /challenges/targets?scope=`, `POST /challenges`, `GET /challenges/:id`
-- `POST /challenges/:id/accept | decline | progress | approve | reject | cancel | finish`, `POST /challenges/:id/entries/:entryId/review`
-- Managers and HR: `GET /admin/overview | approvals | participation | leaderboard | export.csv | users | settings`, `GET /admin/org`
-- HR and admins: `POST /admin/users`, `PATCH /admin/users/:id`, `POST|PATCH /admin/org/{regions,branches,departments,teams}`, `PUT /admin/settings`

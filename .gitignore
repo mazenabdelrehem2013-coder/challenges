@@ -6,3 +6,4 @@ dist/
 web-build/
 .env
 *-debug.log
+public/

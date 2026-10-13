@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api, qs } from './api.js';
+import { backend, createLogin, sendReset, authMessage } from './firebase.js';
 
 const SCOPE_LABEL = { person: 'People', team: 'Teams', department: 'Departments', branch: 'Branches', region: 'Regions' };
 const STATUS_LABEL = {
@@ -407,7 +408,7 @@ export function Leaderboard({ me }) {
       </div>
       <div className="row">
         <Seg label="Rank" value={scope} onChange={setScope} options={Object.entries(SCOPE_LABEL)} />
-        <Seg label="Period" value={period} onChange={setPeriod} options={[['week', 'This week'], ['month', 'This month'], ['all', 'All time']]} />
+        <Seg label="Period" value={period} onChange={setPeriod} options={[['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All time']]} />
       </div>
       <Err error={error} />
       <section className="card">
@@ -450,7 +451,7 @@ export function People({ me, isStaff }) {
     <>
       <div className="row between">
         <h1>People</h1>
-        {isStaff && <button className="primary" onClick={() => setAdding((v) => !v)}>{adding ? 'Close' : '+ Add person'}</button>}
+        {isStaff && <button className="primary" onClick={() => setAdding((v) => !v)}>{adding ? 'Close' : '+ Add sign-in'}</button>}
       </div>
       {adding && org && <AddPerson org={org} me={me} onDone={() => { setAdding(false); reload(); }} />}
       <div className="row" style={{ alignItems: 'flex-end' }}>
@@ -469,7 +470,7 @@ export function People({ me, isStaff }) {
                   <td><b>{u.name}</b><div className="muted">{u.email}</div></td>
                   <td>
                     {isStaff && org ? (
-                      <select aria-label={`Team for ${u.name}`} value={u.team.id} onChange={(e) => update(u, { teamId: Number(e.target.value) })}>
+                      <select aria-label={`Team for ${u.name}`} value={u.team.id} onChange={(e) => update(u, { teamId: e.target.value })}>
                         {org.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     ) : u.team.name}
@@ -487,10 +488,7 @@ export function People({ me, isStaff }) {
                   {isStaff && (
                     <td>
                       <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
-                        <button className="small" onClick={() => {
-                          const pw = window.prompt(`New password for ${u.name} (at least 8 characters)`);
-                          if (pw) update(u, { password: pw });
-                        }}>Reset password</button>
+                        {u.email && <button className="small" onClick={() => sendReset(u.email).then(() => setMsg(`Password reset email sent to ${u.email}.`), (err) => setMsg(authMessage(err)))}>Send password reset</button>}
                         {u.id !== me.id && <button className="small" onClick={() => window.confirm(`Deactivate ${u.name}? They won't be able to sign in.`) && update(u, { active: false })}>Deactivate</button>}
                       </div>
                     </td>
@@ -506,21 +504,24 @@ export function People({ me, isStaff }) {
 }
 
 function AddPerson({ org, me, onDone }) {
-  const [f, setF] = useState({ name: '', email: '', title: '', password: '', role: 'employee', teamId: org.teams[0]?.id || '' });
+  const [f, setF] = useState({ name: '', email: '', title: '', password: '', role: 'manager', teamId: org.teams[0]?.id || '' });
   const [error, setError] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   async function submit(e) {
     e.preventDefault();
     try {
-      await api('/admin/users', { method: 'POST', body: { ...f, teamId: Number(f.teamId) } });
+      if (f.password.length < 8) throw new Error('The first password needs at least 8 characters');
+      const uid = await createLogin(f.email.trim(), f.password);
+      await backend.addPlayer(uid, { ...f, email: f.email.trim() });
       onDone();
     } catch (err) {
-      setError(err.message);
+      setError(authMessage(err));
     }
   }
   return (
     <form className="card" onSubmit={submit}>
-      <h2>Add a person</h2>
+      <h2>Add a sign-in</h2>
+      <p className="muted">For managers and HR (and anyone who should use the dashboard). Employees don't need this: they join on the phone app with their name and team.</p>
       <Err error={error} />
       <div className="form">
         <label className="field">Name<input value={f.name} onChange={set('name')} required /></label>
@@ -537,7 +538,7 @@ function AddPerson({ org, me, onDone }) {
           </select>
         </label>
       </div>
-      <div><button className="primary">Add person</button></div>
+      <div><button className="primary">Add sign-in</button></div>
     </form>
   );
 }
@@ -587,7 +588,7 @@ function OrgList({ title, items, extra = [], onAdd }) {
       <form className="stack" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { onAdd(name.trim(), sel); setName(''); } }}>
         <input aria-label={`New ${title.toLowerCase()} name`} placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         {extra.map(([k, label, list]) => (
-          <select key={k} aria-label={label} value={sel[k] ?? ''} onChange={(e) => setSel({ ...sel, [k]: Number(e.target.value) })}>
+          <select key={k} aria-label={label} value={sel[k] ?? ''} onChange={(e) => setSel({ ...sel, [k]: e.target.value })}>
             {list.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         ))}
@@ -611,8 +612,8 @@ export function Reports({ me }) {
 
   async function download() {
     try {
-      const res = await api(`/admin/export.csv${qs({ ...filter, period })}`, { raw: true });
-      const url = URL.createObjectURL(await res.blob());
+      const csv = await api(`/admin/export.csv${qs({ ...filter, period })}`);
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
       const a = document.createElement('a');
       a.href = url;
       a.download = `challenges-report-${period}.csv`;
@@ -634,7 +635,7 @@ export function Reports({ me }) {
       </div>
       <div className="row">
         <Seg label="Group by" value={by} onChange={setBy} options={[['team', 'Team'], ['department', 'Department'], ['branch', 'Branch'], ['region', 'Region']]} />
-        <Seg label="Period" value={period} onChange={setPeriod} options={[['week', 'This week'], ['month', 'This month'], ['all', 'All time']]} />
+        <Seg label="Period" value={period} onChange={setPeriod} options={[['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All time']]} />
       </div>
       <Err error={error || msg} />
       <section className="card">

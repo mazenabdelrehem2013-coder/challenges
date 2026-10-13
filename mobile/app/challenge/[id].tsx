@@ -70,6 +70,10 @@ export default function ChallengeDetail() {
             By {c.createdBy.name} · {c.status === 'completed' ? 'Finished' : timeLeft(c.endsAt)} · +{c.points} pts{c.reward ? ` · ${c.reward}` : ''}
           </Muted>
           <Muted>{JUDGING_TEXT[c.judging]}{c.scope !== 'person' ? " Each group's score is the exact total of its people's scores." : ''}</Muted>
+          {c.result ? <Text style={{ fontSize: 15, fontWeight: '700', color: colors.good }}>{c.result}</Text> : null}
+          {c.status === 'active' && new Date(c.endsAt) <= new Date() ? (
+            <Muted>Time is up. The result is added as soon as a manager or HR opens the dashboard.</Muted>
+          ) : null}
           {c.rejectionReason ? <ErrorText error={`Not approved: ${c.rejectionReason}`} /> : null}
         </View>
 

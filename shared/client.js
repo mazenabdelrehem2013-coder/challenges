@@ -609,7 +609,10 @@ export function createBackend({ fs, db, auth }) {
     const ledger = (await pointsSince(period)) ?? people.map((p) => ({ userId: p.id, amount: p.points || 0 }));
     const rows = leaderboard(people, ledger, scope, { me: viewer });
     const names = new Map((await entityList(scope)).map((e) => [e.id, e.name]));
-    return rows.map((r) => ({ ...r, name: names.get(r.id) || 'Unknown' }));
+    const named = rows.map((r) => ({ ...r, name: names.get(r.id) || 'Unknown' }));
+    named.sort((x, y) => y.score - x.score || x.name.localeCompare(y.name));
+    named.forEach((r, i) => (r.rank = i + 1));
+    return named;
   }
   function staffFilter(viewer, q) {
     if (!isStaffRole(viewer)) fail(403, 'You do not have access to this');

@@ -5,7 +5,8 @@
   "description": "Employee challenges app on Firebase: phone app (mobile/), manager and HR dashboard (dashboard/), shared game rules (shared/) and database rules (firestore.rules).",
   "scripts": {
     "test": "node --test tests/game.test.js && firebase emulators:exec --only firestore,auth --project demo-challenges \"node --test --test-concurrency=1 tests/rules.test.js tests/client.test.js\"",
-    "emulators": "firebase emulators:start --only firestore,auth --project demo-challenges"
+    "emulators": "firebase emulators:start --only firestore,auth --project demo-challenges",
+    "seed": "node scripts/seed.mjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

@@ -7,9 +7,9 @@ import type { Scope } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import { colors, fmt, SCOPE_LABEL } from '@/lib/theme';
 
-interface Row { id: number; name: string; score: number; members: number; rank: number; me: boolean }
+interface Row { id: string; name: string; score: number; members: number; rank: number; me: boolean }
 
-const PERIODS = [['week', 'This week'], ['month', 'This month'], ['all', 'All time']] as const;
+const PERIODS = [['day', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All time']] as const;
 const PODIUM = [
   { place: 2, height: 72, tint: '#DCE7FF', ink: '#1D3A8A', ring: '#C7CDD9' },
   { place: 1, height: 100, tint: colors.goldSoft, ink: colors.goldInk, ring: colors.gold },
@@ -18,7 +18,7 @@ const PODIUM = [
 
 export default function Leaderboard() {
   const [scope, setScope] = useState<Scope>('person');
-  const [period, setPeriod] = useState<(typeof PERIODS)[number][0]>('week');
+  const [period, setPeriod] = useState<(typeof PERIODS)[number][0]>('day');
   const { data, error, refresh, refreshing } = useApi<Row[]>(`/leaderboard?scope=${scope}&period=${period}`);
   const rows = data || [];
   const unit = 'pts';

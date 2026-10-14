@@ -8,6 +8,16 @@ n=0
 shot() { n=$((n+1)); sleep "${2:-3}"; adb exec-out screencap -p > "$OUT/$(printf %02d $n)-$1.png"; echo "saved $1"; }
 # Tap the first on-screen element whose text matches (python regex).
 tap() {
+  adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml >/dev/null 2>&1
+  if grep -q "isn&apos;t responding\|isn't responding" ui.xml; then
+    w=$(python3 -c "
+import re, xml.etree.ElementTree as ET
+for n in ET.parse('ui.xml').iter('node'):
+    if n.get('text')=='Wait':
+        a,b,c,d=map(int,re.findall(r'\\d+',n.get('bounds'))); print((a+c)//2,(b+d)//2); break")
+    [ -n "$w" ] && adb shell input tap $w && echo "dismissed popup" && sleep 2
+  fi
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml >/dev/null 2>&1
   xy=$(python3 - "$1" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
@@ -21,6 +31,7 @@ PY
   if [ -n "$xy" ]; then adb shell input tap $xy; echo "tapped $1"; else echo "not found: $1"; fi
 }
 adb install -r challenges.apk
+adb shell settings put global hide_error_dialogs 1
 # Let the emulator settle, and clear any "isn't responding" popup from its launcher.
 sleep 30; tap '^Wait$'; adb shell input keyevent 3; sleep 5
 adb shell screenrecord --time-limit 170 /sdcard/tour.mp4 & REC=$!

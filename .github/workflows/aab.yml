@@ -14,10 +14,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - run: npm ci
+        working-directory: mobile
       - name: Find the newest finished Android build
         working-directory: mobile
         run: |
-          npx --yes eas-cli@latest build:list --platform android --limit 5 --json --non-interactive > builds.json
+          npx --yes eas-cli@latest build:list --platform android --limit 5 --json --non-interactive > builds.json || { cat builds.json; exit 1; }
           jq -r '.[] | "\(.status) \(.artifacts.buildUrl // "-")"' builds.json
           url=$(jq -r '[.[] | select(.status=="FINISHED")][0].artifacts.buildUrl' builds.json)
           test -n "$url" && test "$url" != null

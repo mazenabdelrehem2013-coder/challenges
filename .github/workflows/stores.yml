@@ -1,0 +1,29 @@
+name: Store builds
+# Builds the versions Google Play (.aab) and the App Store (.ipa) accept, on Expo's free build service.
+# Needs the repository secret EXPO_TOKEN (from expo.dev > Account settings > Access tokens).
+# Expo keeps the Android upload key and the Apple certificates, so nothing secret lives in this repo.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which store
+        type: choice
+        options: [all, android, ios]
+        default: all
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Link the app to the Expo account (first run only)
+        run: npx --yes eas-cli@latest init --non-interactive --force
+      - name: Start the store builds
+        run: npx --yes eas-cli@latest build --platform ${{ inputs.platform }} --profile production --non-interactive --no-wait

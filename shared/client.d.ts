@@ -12,6 +12,7 @@ export interface Backend {
   claimOwner(input: { name: string; company?: string }): Promise<any>;
   addPlayer(uid: string, input: Record<string, unknown>): Promise<any>;
   settleDue(viewer: any, now?: Date): Promise<string[]>;
+  deleteAccount(): Promise<void>;
   forget(): void;
 }
 export function createBackend(deps: { fs: any; db: any; auth: any }): Backend;

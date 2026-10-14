@@ -28,8 +28,10 @@ function Stat({ value, label, color = colors.ink }: { value: string; label: stri
 }
 
 export default function Profile() {
-  const { signOut } = useSession();
-  const [confirm, setConfirm] = useState(false);
+  const { signOut, deleteAccount } = useSession();
+  const [confirm, setConfirm] = useState<'' | 'signout' | 'delete'>('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const { data: p, error, refresh, refreshing } = useApi<ProfileData>('/me');
 
   return (
@@ -89,15 +91,41 @@ export default function Profile() {
               })}
             </View>
 
-            {confirm ? (
+            {confirm === 'signout' && (
               <Card style={{ gap: 10 }}>
                 <Text style={{ fontWeight: '700', color: colors.ink }}>Sign out of this phone?</Text>
                 <Muted>You joined without a password, so signing out loses this account, its points and badges.</Muted>
                 <Button title="Sign out anyway" kind="secondary" onPress={signOut} />
-                <Button title="Keep me signed in" onPress={() => setConfirm(false)} />
+                <Button title="Keep me signed in" onPress={() => setConfirm('')} />
               </Card>
-            ) : (
-              <Button title="Sign out" kind="secondary" onPress={() => setConfirm(true)} />
+            )}
+            {confirm === 'delete' && (
+              <Card style={{ gap: 10 }}>
+                <Text style={{ fontWeight: '700', color: colors.ink }}>Delete your account?</Text>
+                <Muted>Your name, points and badges are removed for good. Past challenge results will show "Deleted user".</Muted>
+                <ErrorText error={deleteError} />
+                <Button
+                  title={deleting ? 'Deleting…' : 'Delete my account'}
+                  kind="secondary"
+                  onPress={async () => {
+                    setDeleting(true);
+                    setDeleteError('');
+                    try {
+                      await deleteAccount();
+                    } catch (e) {
+                      setDeleteError(e instanceof Error ? e.message : 'Could not delete the account');
+                      setDeleting(false);
+                    }
+                  }}
+                />
+                <Button title="Keep my account" onPress={() => setConfirm('')} />
+              </Card>
+            )}
+            {!confirm && (
+              <View style={{ gap: 10 }}>
+                <Button title="Sign out" kind="secondary" onPress={() => setConfirm('signout')} />
+                <Button title="Delete my account" kind="secondary" onPress={() => setConfirm('delete')} />
+              </View>
             )}
           </>
         )}

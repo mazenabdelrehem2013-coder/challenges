@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signInAnonymously, signOut as fbSignOut } from 'firebase/auth';
+import { deleteUser, onAuthStateChanged, signInAnonymously, signOut as fbSignOut } from 'firebase/auth';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Me } from './api';
 import { auth, backend } from './firebase';
@@ -10,6 +10,7 @@ interface Session {
   ready: boolean;
   join: (name: string, teamId: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -53,7 +54,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setMe(null);
   }, []);
 
-  return <SessionContext.Provider value={{ me, ready, join, signOut, refresh }}>{children}</SessionContext.Provider>;
+  // Wipes the profile, then removes the sign-in. If Firebase refuses to delete the sign-in
+  // (it can ask for a fresh login), signing out still leaves nothing usable behind.
+  const deleteAccount = useCallback(async () => {
+    await backend.deleteAccount();
+    try {
+      if (auth.currentUser) await deleteUser(auth.currentUser);
+    } catch {
+      await fbSignOut(auth);
+    }
+    setMe(null);
+  }, []);
+
+  return <SessionContext.Provider value={{ me, ready, join, signOut, deleteAccount, refresh }}>{children}</SessionContext.Provider>;
 }
 
 export function useSession() {

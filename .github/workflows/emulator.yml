@@ -14,7 +14,8 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
       - name: Get the latest APK
-        env: { GH_TOKEN: ${{ github.token }} }
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh release download android-latest --pattern challenges.apk
       - uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -25,7 +26,8 @@ jobs:
           disable-animations: true
           script: bash scripts/emulator-tour.sh
       - name: Publish the screenshots
-        env: { GH_TOKEN: ${{ github.token }} }
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete emulator-tour --yes --cleanup-tag || true
           gh release create emulator-tour tour/* --target "$GITHUB_SHA" --title "Emulator tour" --notes "Screenshots of the Android app running on an emulator."

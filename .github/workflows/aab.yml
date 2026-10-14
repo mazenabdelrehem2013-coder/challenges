@@ -19,8 +19,14 @@ jobs:
       - name: Find the newest finished Android build
         working-directory: mobile
         run: |
-          npx --yes eas-cli@latest build:list --platform android --limit 5 --json --non-interactive > builds.json || { cat builds.json; exit 1; }
-          jq -r '.[] | "\(.status) \(.artifacts.buildUrl // "-")"' builds.json
+          # Wait (up to 90 minutes) while the newest build is still queued or building.
+          for i in $(seq 1 90); do
+            npx --yes eas-cli@latest build:list --platform android --limit 5 --json --non-interactive > builds.json || { cat builds.json; exit 1; }
+            newest=$(jq -r '.[0].status' builds.json)
+            echo "Newest build: $newest"
+            case "$newest" in NEW|IN_QUEUE|IN_PROGRESS|PENDING_CANCEL) sleep 60 ;; *) break ;; esac
+          done
+          jq -r '.[] | "\(.status) versionCode=\(.appBuildVersion) \(.artifacts.buildUrl // "-")"' builds.json
           url=$(jq -r '[.[] | select(.status=="FINISHED")][0].artifacts.buildUrl' builds.json)
           test -n "$url" && test "$url" != null
           curl -sSL -o ../challenges.aab "$url"

@@ -28,15 +28,26 @@ adb shell monkey -p $APP -c android.intent.category.LAUNCHER 1 >/dev/null
 shot join 25
 tap '^Wait$'
 tap 'Your name'; sleep 2
-for w in Emulator; do adb shell input text "$w"; sleep 1; done
-adb shell input keyevent 62; sleep 1; adb shell input text test; sleep 1
+adb shell input text Tester; sleep 2
 adb shell input keyevent 4; sleep 2   # hide the keyboard
 tap ' · '; shot join-filled 3
 tap '^Join$'; shot home 12
 tap '^Ranks$'; shot leaderboard 6
-tap '^Challenge$'; shot new-challenge 6
+# The middle "+" tab has no text: tap halfway between Ranks and Alerts.
+adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml >/dev/null 2>&1
+xy=$(python3 - <<'PY'
+import re, xml.etree.ElementTree as ET
+pos={}
+for n in ET.parse('ui.xml').iter('node'):
+    if n.get('text') in ('Ranks','Alerts'):
+        a,b,c,d=map(int,re.findall(r'\d+',n.get('bounds'))); pos[n.get('text')]=((a+c)//2,b)
+r,a=pos['Ranks'],pos['Alerts']; print((r[0]+a[0])//2, r[1]-20)
+PY
+)
+adb shell input tap $xy; shot new-challenge 6
 tap '^Alerts$'; shot alerts 6
 tap '^Profile$'; shot profile 6
+adb shell input swipe 540 1800 540 400 400; sleep 1; adb shell input swipe 540 1800 540 400 400
 tap '^Delete my account$'; shot delete-confirm 3
 tap '^Delete my account$'; shot after-delete 10
 kill $REC 2>/dev/null; sleep 3; adb pull /sdcard/tour.mp4 "$OUT/tour.mp4" || true

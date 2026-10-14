@@ -7,5 +7,5 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 rm -rf "$ROOT/public"
 (cd "$ROOT/mobile" && CI=1 npx expo export --platform web --output-dir "$ROOT/public")
 (cd "$ROOT/dashboard" && npx vite build --outDir "$ROOT/public/admin" --emptyOutDir)
-cp "$ROOT/site/"*.html "$ROOT/public/"
+cp -r "$ROOT/site/." "$ROOT/public/"
 echo "Built into public/"

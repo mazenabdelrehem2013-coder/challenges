@@ -42,6 +42,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "owner": "rozain_mazen",
+    "extra": {
+      "eas": {
+        "projectId": "8c60d6f7-b9aa-4dea-bfd2-a68c9f9be350"
+      }
     }
   }
 }

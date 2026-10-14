@@ -1,0 +1,29 @@
+name: Publish Play Store file
+# Takes the newest finished Android build from Expo and publishes its .aab as the release "android-aab".
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Find the newest finished Android build
+        working-directory: mobile
+        run: |
+          npx --yes eas-cli@latest build:list --platform android --limit 5 --json --non-interactive > builds.json
+          jq -r '.[] | "\(.status) \(.artifacts.buildUrl // "-")"' builds.json
+          url=$(jq -r '[.[] | select(.status=="FINISHED")][0].artifacts.buildUrl' builds.json)
+          test -n "$url" && test "$url" != null
+          curl -sSL -o ../challenges.aab "$url"
+          ls -la ../challenges.aab
+      - name: Publish it
+        run: |
+          gh release delete android-aab --yes --cleanup-tag || true
+          gh release create android-aab challenges.aab --target "$GITHUB_SHA" --title "Play Store file (.aab)" --notes "Upload this file in Play Console."

@@ -21,10 +21,16 @@ PY
   if [ -n "$xy" ]; then adb shell input tap $xy; echo "tapped $1"; else echo "not found: $1"; fi
 }
 adb install -r challenges.apk
+# Let the emulator settle, and clear any "isn't responding" popup from its launcher.
+sleep 30; tap '^Wait$'; adb shell input keyevent 3; sleep 5
 adb shell screenrecord --time-limit 170 /sdcard/tour.mp4 & REC=$!
 adb shell monkey -p $APP -c android.intent.category.LAUNCHER 1 >/dev/null
 shot join 25
-tap 'Your name'; adb shell input text 'Emulator%stest'; adb shell input keyevent 111
+tap '^Wait$'
+tap 'Your name'; sleep 2
+for w in Emulator; do adb shell input text "$w"; sleep 1; done
+adb shell input keyevent 62; sleep 1; adb shell input text test; sleep 1
+adb shell input keyevent 4; sleep 2   # hide the keyboard
 tap ' · '; shot join-filled 3
 tap '^Join$'; shot home 12
 tap '^Ranks$'; shot leaderboard 6

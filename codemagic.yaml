@@ -1,0 +1,45 @@
+# iPhone build on Codemagic: builds the Expo app in mobile/, signs it for the App Store and
+# uploads it to TestFlight. Needs, in Codemagic (Team settings):
+#   - an App Store Connect API key integration (its name goes in `app_store_connect` below)
+#   - an environment variable group "ios_signing" with CERTIFICATE_PRIVATE_KEY, the same one
+#     the attendance app uses for automatic signing.
+workflows:
+  ios-testflight:
+    name: iPhone build to TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      groups:
+        - ios_signing
+      vars:
+        BUNDLE_ID: com.employeechallenges.app
+        XCODE_WORKSPACE: mobile/ios/Challenges.xcworkspace
+        XCODE_SCHEME: Challenges
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install the app's packages
+        script: cd mobile && npm ci
+      - name: Generate the Xcode project
+        script: cd mobile && CI=1 npx expo prebuild --platform ios --no-install && cd ios && pod install
+      - name: Get signing certificate and profile from Apple
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Set the build number
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0)
+          cd mobile/ios && agvtool new-version -all $((LATEST + 1))
+      - name: Build the .ipa
+        script: xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

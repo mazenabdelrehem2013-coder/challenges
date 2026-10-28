@@ -10,7 +10,8 @@ It runs on Firebase's free Spark plan: there is no server to look after.
 | `dashboard/` | React web dashboard for managers and HR, at `/admin`. |
 | `shared/` | The game rules (`game.js`) and the data layer both apps use (`client.js`), plus your Firebase settings (`firebase-config.js`). |
 | `firestore.rules` | Who can read and change what in the database. This is what stops cheating. |
-| `tests/` | Game rules, database rules, and full games played against the Firebase emulators. |
+| `shared/scoring/` | Raya Challenge scoring engine: KPI templates, monthly and team scores, points ledger, finalized months. See [docs/raya/SCORING.md](docs/raya/SCORING.md) and the plan in [docs/raya/PLAN.md](docs/raya/PLAN.md). |
+| `tests/` | Game rules, scoring engine, database rules, and full games played against the Firebase emulators. |
 
 ## How sign-in works
 

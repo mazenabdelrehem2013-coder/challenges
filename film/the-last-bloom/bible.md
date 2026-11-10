@@ -72,11 +72,27 @@ S02 | THE GLASSHOUSE | dawn, after the storm | PIP | The flower survived; Pip ha
 | Keyframe S02-SH01 (T2; T1 rejected: flower looked crushed) | https://asset.imagine.art/processed/29b8f1c8-65f4-4634-ba21-5daab8f7d9cb |
 | Keyframe S02-SH02 | https://asset.imagine.art/processed/d7952cb4-7236-461b-9f80-e5a0c9e69a2e |
 | Storyboard | [storyboard.jpg](storyboard.jpg) |
-| Clips | _pending_ |
-| Music cue | _pending_ |
+| Clip S01-SH04 T1 (approved, used 0.4–6.4 s) | https://asset.imagine.art/processed/469de00d-c13d-46a3-82d7-2aff67b4797f |
+| Clips for the other 5 shots | not made: ran out of ImagineArt credits (453 left; a 6 s 1080p clip costs more) |
+| Music cue (30 s instrumental: quiet to 11 s, swell 12–19 s, drops at 20 s, resolves, silent by 26 s) | https://asset.imagine.art/processed/01a1c7dc-f182-7480-afd1-3c3512ec2830 |
+| Cut v1 | [the-last-bloom.mp4](the-last-bloom.mp4), built with [build.sh](build.sh) |
 
 ## Notes for the shoot
 
 - Every keyframe has thin black bars at the left and right (inherited from the glasshouse plate): crop them in the edit.
 - S01-SH03: the roof crack is not yet visible in the keyframe; the clip prompt must have it spread across the pane.
 - Plan: seedance-2.5, 1080p, durations 6/6/5/7/6/6 s (shot + ~1 s handles), clip prompts say "Audio: no music, no speech" so the score can go on top. Test shot: S01-SH04.
+
+## Cut v1 (what is real footage and what is not)
+
+| Time | Shot | In the cut |
+|---|---|---|
+| 0:00–0:05 | S01-SH01 | keyframe, slow push in, rain layer added in ffmpeg |
+| 0:05–0:10 | S01-SH02 | keyframe, slow push in |
+| 0:10–0:14 | S01-SH03 | keyframe, tilt up, two lightning flashes added in ffmpeg |
+| 0:14–0:20 | S01-SH04 | **real Seedance clip** |
+| 0:20–0:25 | S02-SH01 | keyframe, slow push in, light warming |
+| 0:25–0:28.5 | S02-SH02 | keyframe, slow push in, eye flicker added in ffmpeg |
+| 0:28.5–0:30 | title | "THE LAST BLOOM" on black |
+
+To upgrade a shot to real footage: generate its clip with the prompt from the shooting plan, save it in `clips/`, and replace its `still` line in `build.sh` with a clip line like shot 4's.
